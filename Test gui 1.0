@@ -1,0 +1,1494 @@
+-- A-mod menu | ЧАСТЬ 1/5: палитра, иконки Lucide, окно, тени
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+if _G.AmodM and _G.AmodM.destroy then
+	pcall(_G.AmodM.destroy)
+end
+
+local M = {}
+_G.AmodM = M
+M.connections = {}
+M.scrollFrames = {}
+M.pages = {}
+M.shadows = {}
+M.loops = {}
+
+M.C = {
+	bg = Color3.fromRGB(16, 23, 33),
+	header = Color3.fromRGB(15, 18, 23),
+	sidebar = Color3.fromRGB(18, 22, 31),
+	sideEdge = Color3.fromRGB(28, 31, 40),
+	tabSel = Color3.fromRGB(25, 30, 49),
+	tabHover = Color3.fromRGB(22, 28, 42),
+	tabOn = Color3.fromRGB(110, 158, 252),
+	tabOff = Color3.fromRGB(86, 96, 150),
+	accent = Color3.fromRGB(96, 143, 230),
+	title = Color3.fromRGB(104, 145, 225),
+	subtitle = Color3.fromRGB(67, 69, 84),
+	online = Color3.fromRGB(110, 190, 125),
+	version = Color3.fromRGB(68, 72, 83),
+	section = Color3.fromRGB(119, 125, 149),
+	sectionBar = Color3.fromRGB(114, 137, 189),
+	label = Color3.fromRGB(228, 230, 242),
+	labelHover = Color3.fromRGB(255, 255, 255),
+	panel = Color3.fromRGB(18, 22, 33),
+	panelEdge = Color3.fromRGB(26, 30, 39),
+	line = Color3.fromRGB(36, 43, 61),
+	boxOff = Color3.fromRGB(31, 33, 45),
+	boxEdge = Color3.fromRGB(40, 45, 58),
+	boxOn = Color3.fromRGB(92, 142, 240),
+	check = Color3.fromRGB(235, 246, 255),
+	trackBg = Color3.fromRGB(10, 18, 39),
+	fill = Color3.fromRGB(91, 147, 245),
+	knob = Color3.fromRGB(253, 254, 255),
+	value = Color3.fromRGB(104, 144, 214),
+	scroll = Color3.fromRGB(67, 78, 132),
+	edge = Color3.fromRGB(30, 40, 64),
+}
+local C = M.C
+
+M.FONT = Enum.Font.Ubuntu
+
+M.W = 633
+M.H = 405
+M.HEADER_H = 52
+M.SIDE_W = 53
+M.CW = M.W - M.SIDE_W
+M.CH = M.H - M.HEADER_H
+
+function M.new(class, props, parent)
+	local obj = Instance.new(class)
+	for key, value in pairs(props) do
+		obj[key] = value
+	end
+	obj.Parent = parent
+	return obj
+end
+local new = M.new
+
+function M.corner(parent, radius)
+	return new("UICorner", { CornerRadius = UDim.new(0, radius) }, parent)
+end
+
+function M.stroke(parent, color, thickness, transparency)
+	return new("UIStroke", {
+		Color = color,
+		Thickness = thickness or 1,
+		Transparency = transparency or 0,
+	}, parent)
+end
+
+function M.tw(obj, duration, props, style, direction)
+	local tween = TweenService:Create(obj, TweenInfo.new(
+		duration,
+		style or Enum.EasingStyle.Quint,
+		direction or Enum.EasingDirection.Out
+	), props)
+	tween:Play()
+	return tween
+end
+local tw = M.tw
+
+function M.bind(signal, fn)
+	local connection = signal:Connect(fn)
+	M.connections[#M.connections + 1] = connection
+	return connection
+end
+local bind = M.bind
+
+-- ===== Иконки Lucide (контуры), рисуются повёрнутыми скруглёнными линиями =====
+M.ICONS = {
+	home = {
+		{15,21,15,12.7,14.3,12,9.7,12,9,12.7,9,21},
+		{3,10,3.3,8.9,11.2,2.2,12.3,2,13.3,2.5,20.7,8.9,21,10,20.9,19.6,20.2,20.6,19,21,4.4,20.9,3.4,20.2,3,19,3,10},
+	},
+	users = {
+		{16,21,16,19,15.8,17.8,15.2,16.6,14.4,15.8,13.2,15.2,12,15,6,15,4.8,15.2,3.6,15.8,2.8,16.6,2.2,17.8,2,19,2,21},
+		{13,7,12.7,8.5,11.8,9.8,10.5,10.7,9,11,7.5,10.7,6.2,9.8,5.3,8.5,5,7,5.3,5.5,6.2,4.2,7.5,3.3,9,3,10.5,3.3,11.8,4.2,12.7,5.5,13,7},
+		{22,21,22,19,21.8,17.7,21.2,16.6,20.2,15.7,19,15.1},
+		{16,3.1,17.2,3.7,18.2,4.6,18.8,5.7,19,7,18.8,8.3,18.2,9.5,17.2,10.3,16,10.9},
+	},
+	eye = {
+		{2.1,12.3,2.1,11.7,4,8.6,6.8,6.3,10.2,5.2,13.8,5.2,17.2,6.3,20,8.6,22,12.1,20,15.4,17.2,17.7,13.8,18.8,10.2,18.8,6.8,17.7,4,15.4,2.1,12.3},
+		{15,12,14.8,13.1,14.1,14.1,13.1,14.8,12,15,10.9,14.8,9.9,14.1,9.2,13.1,9,12,9.2,10.9,9.9,9.9,10.9,9.2,12,9,13.1,9.2,14.1,9.9,14.8,10.9,15,12},
+	},
+	box = {
+		{21,8,20.9,7.3,20.5,6.7,12.5,2.1,11.5,2.1,3.5,6.7,3.1,7.3,3,16,3.1,16.7,3.5,17.3,11.5,21.9,12.5,21.9,20.5,17.3,20.9,16.7,21,8},
+		{3.3,7,12,12,20.7,7},
+		{12,22,12,12},
+	},
+	gem = {
+		{10.5,3,8,9,12,22,16,9,13.5,3},
+		{17,3,18.2,3.4,21.9,8.4,21.9,9.6,13.2,21.6,12,22,10.8,21.6,2.1,9.6,2.1,8.4,5.8,3.4,7,3,17,3},
+		{2,9,22,9},
+	},
+	palette = {
+		{12,2,10.4,2.1,8.8,2.5,7.4,3.1,4.9,4.9,3.1,7.4,2.5,8.8,2.1,10.4,2,12,2.1,13.6,2.5,15.2,3.1,16.6,4.9,19.1,7.4,20.9,8.8,21.5,10.4,21.9,12.8,21.8,13.6,20.6,12.8,18.1,13.1,17.1,13.9,16.5,17.3,16.3,19,15.8,20.4,14.8,21.4,13.4,21.9,11.7,21.9,9.4,21.5,8.1,20,5.6,17.9,3.7,15.1,2.5,12,2},
+		{14,6.5,13.5,7,13,6.5,13.5,6,14,6.5},
+		{18,10.5,17.5,11,17,10.5,17.5,10,18,10.5},
+		{7,12.5,6.5,13,6,12.5,6.5,12,7,12.5},
+		{9,7.5,8.5,8,8,7.5,8.5,7,9,7.5},
+	},
+	settings = {
+		{9.7,4.1,9.9,3.4,10.3,2.8,10.9,2.3,11.6,2,12.4,2,13.1,2.3,13.7,2.8,14.1,3.4,14.5,4.9,15.5,6,16.9,6.3,18.4,5.9,19.1,5.9,19.9,6.2,20.4,6.7,20.8,7.4,21,8.1,20.9,8.9,20.5,9.5,19.4,10.6,19,12,19.4,13.4,20.5,14.5,20.9,15.1,21,15.9,20.8,16.6,20.4,17.3,19.9,17.8,19.1,18.1,18.4,18.1,16.9,17.7,15.5,18,14.5,19.1,14.1,20.6,13.7,21.2,13.1,21.7,12.4,22,11.6,22,10.9,21.7,10.3,21.2,9.9,20.6,9.5,19.1,8.5,18,7.1,17.7,5.6,18.1,4.9,18.1,4.1,17.8,3.6,17.3,3.2,16.6,3,15.9,3.1,15.1,3.5,14.5,4.6,13.4,5,12,4.6,10.6,3.5,9.5,3.1,8.9,3,8.1,3.2,7.4,3.6,6.7,4.1,6.2,4.9,5.9,5.6,5.9,7.1,6.3,8.5,6,9.5,4.9,9.7,4.1},
+		{15,12,14.8,13.1,14.1,14.1,13.1,14.8,12,15,10.9,14.8,9.9,14.1,9.2,13.1,9,12,9.2,10.9,9.9,9.9,10.9,9.2,12,9,13.1,9.2,14.1,9.9,14.8,10.9,15,12},
+	},
+	resize = {
+		{11,19,5,19,5,13},
+		{13,5,19,5,19,11},
+		{19,5,5,19},
+	},
+}
+
+-- Рисует иконку, возвращает таблицу { holder, segs, scale }
+function M.icon(parent, name, color, size)
+	local holder = new("Frame", {
+		Name = "Icon_" .. name,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(size, size),
+		BackgroundTransparency = 1,
+	}, parent)
+	local k = size / 24
+	local thickness = math.max(1.4, 1.9 * k)
+	local segs = {}
+	for _, poly in ipairs(M.ICONS[name]) do
+		for i = 1, #poly - 3, 2 do
+			local x1, y1 = poly[i] * k, poly[i + 1] * k
+			local x2, y2 = poly[i + 2] * k, poly[i + 3] * k
+			local dx, dy = x2 - x1, y2 - y1
+			local len = math.sqrt(dx * dx + dy * dy)
+			local seg = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromOffset((x1 + x2) / 2, (y1 + y2) / 2),
+				Size = UDim2.fromOffset(len + thickness * 0.6, thickness),
+				Rotation = math.deg(math.atan2(dy, dx)),
+				BackgroundColor3 = color,
+				BorderSizePixel = 0,
+			}, holder)
+			M.corner(seg, 99)
+			segs[#segs + 1] = seg
+		end
+	end
+	local scale = new("UIScale", { Scale = 1 }, holder)
+	return { holder = holder, segs = segs, scale = scale }
+end
+
+function M.tint(iconObj, color, duration)
+	for _, seg in ipairs(iconObj.segs) do
+		if duration and duration > 0 then
+			tw(seg, duration, { BackgroundColor3 = color }, Enum.EasingStyle.Quad)
+		else
+			seg.BackgroundColor3 = color
+		end
+	end
+end
+
+-- Куда класть интерфейс
+local parentGui
+local okHui, hui = pcall(function() return gethui and gethui() end)
+if okHui and hui then
+	parentGui = hui
+else
+	local okCore, core = pcall(function() return game:GetService("CoreGui") end)
+	if okCore and core then
+		parentGui = core
+	else
+		parentGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	end
+end
+M.parentGui = parentGui
+
+-- Красная плашка с текстом ошибки, чтобы было видно, что сломалось
+function M.fail(message)
+	warn("[A-mod] " .. tostring(message))
+	pcall(function()
+		local errGui = Instance.new("ScreenGui")
+		errGui.Name = "AmodErr"
+		errGui.ResetOnSpawn = false
+		errGui.DisplayOrder = 2000
+		errGui.Parent = parentGui
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(0.92, 0, 0, 150)
+		label.Position = UDim2.new(0.04, 0, 0, 10)
+		label.BackgroundColor3 = Color3.fromRGB(40, 12, 14)
+		label.TextColor3 = Color3.fromRGB(255, 120, 120)
+		label.TextWrapped = true
+		label.TextSize = 12
+		label.Font = Enum.Font.Code
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextYAlignment = Enum.TextYAlignment.Top
+		label.Text = "A-mod, ошибка:\n" .. tostring(message)
+		label.Parent = errGui
+		task.delay(40, function() errGui:Destroy() end)
+	end)
+end
+
+function M.run(fn)
+	local ok, err = xpcall(fn, function(e)
+		return tostring(e) .. "\n" .. debug.traceback()
+	end)
+	if not ok then
+		M.fail(err)
+	end
+	return ok
+end
+
+function M.destroy()
+	for _, connection in ipairs(M.connections) do
+		pcall(function() connection:Disconnect() end)
+	end
+	if M.gui then
+		M.gui:Destroy()
+	end
+	_G.AmodM = nil
+end
+
+M.run(function()
+	local W, H, HEADER_H = M.W, M.H, M.HEADER_H
+
+	local oldGui = parentGui:FindFirstChild("AmodMenu")
+	if oldGui then oldGui:Destroy() end
+
+	local gui = new("ScreenGui", {
+		Name = "AmodMenu",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 1000,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, parentGui)
+	M.gui = gui
+
+	local root = new("Frame", {
+		Name = "Root",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(W, H),
+		BackgroundTransparency = 1,
+		Visible = false,
+	}, gui)
+	local rootScale = new("UIScale", { Scale = 1 }, root)
+	M.root, M.rootScale = root, rootScale
+
+	for i = 1, 3 do
+		local shadow = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 0, 0.5, i * 2),
+			Size = UDim2.new(1, i * 10, 1, i * 10),
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.88 + i * 0.03,
+			BorderSizePixel = 0,
+			ZIndex = 0,
+		}, root)
+		M.corner(shadow, 3 + i * 4)
+		M.shadows[#M.shadows + 1] = { obj = shadow, base = 0.88 + i * 0.03 }
+	end
+
+	local window = new("CanvasGroup", {
+		Name = "Window",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = C.bg,
+		BorderSizePixel = 0,
+		GroupTransparency = 1,
+		ZIndex = 1,
+	}, root)
+	M.corner(window, 3)
+	M.window = window
+
+	local edge = new("Frame", {
+		Name = "Edge",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		ZIndex = 5,
+	}, root)
+	M.corner(edge, 3)
+	M.edgeStroke = M.stroke(edge, C.edge, 1, 1)
+end)
+-- A-mod menu | ЧАСТЬ 2/5: шапка, перетаскивание, открытие/закрытие, длинная линия, уголок изменения размера
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+M.run(function()
+	local Players = game:GetService("Players")
+	local TweenService = game:GetService("TweenService")
+	local UserInputService = game:GetService("UserInputService")
+	local C, new, tw, bind = M.C, M.new, M.tw, M.bind
+	local W, H, HEADER_H = M.W, M.H, M.HEADER_H
+	local gui, root, window, rootScale = M.gui, M.root, M.window, M.rootScale
+	if not (gui and window) then error("Сначала запусти часть 1") end
+
+	local header = new("Frame", {
+		Name = "Header",
+		Size = UDim2.fromOffset(W, HEADER_H),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+	}, window)
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(21, 28, 44)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(15, 18, 23)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 18, 23)),
+		}),
+	}, header)
+	new("Frame", {
+		Position = UDim2.fromOffset(0, HEADER_H - 1),
+		Size = UDim2.fromOffset(W, 1),
+		BackgroundColor3 = C.sideEdge,
+		BorderSizePixel = 0,
+	}, header)
+	M.header = header
+
+	local accentBar = new("Frame", {
+		Size = UDim2.fromOffset(3, HEADER_H),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+	}, header)
+	local accentGradient = new("UIGradient", {
+		Rotation = 90,
+		Offset = Vector2.new(0, -0.45),
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(66, 104, 192)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(128, 168, 250)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(66, 104, 192)),
+		}),
+	}, accentBar)
+	local accentLoop = TweenService:Create(accentGradient, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Offset = Vector2.new(0, 0.45),
+	})
+	accentLoop:Play()
+	M.loops[#M.loops + 1] = accentLoop
+
+	new("TextLabel", {
+		Name = "Title",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.fromOffset(13, 18),
+		Size = UDim2.fromOffset(220, 20),
+		BackgroundTransparency = 1,
+		Text = "A-mod",
+		Font = M.FONT,
+		TextSize = 17,
+		TextColor3 = C.title,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, header)
+	new("TextLabel", {
+		Name = "Subtitle",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.fromOffset(13, 36),
+		Size = UDim2.fromOffset(220, 18),
+		BackgroundTransparency = 1,
+		Text = "ROBLOX",
+		Font = M.FONT,
+		TextSize = 15,
+		TextColor3 = C.subtitle,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, header)
+
+	new("TextLabel", {
+		Name = "Online",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.fromOffset(W - 11, 21),
+		Size = UDim2.fromOffset(56, 18),
+		BackgroundTransparency = 1,
+		Text = "ONLINE",
+		Font = M.FONT,
+		TextSize = 15,
+		TextColor3 = C.online,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, header)
+	new("TextLabel", {
+		Name = "Version",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.fromOffset(W - 11, 38),
+		Size = UDim2.fromOffset(120, 16),
+		BackgroundTransparency = 1,
+		Text = "v3.0 - BETA",
+		Font = M.FONT,
+		TextSize = 12,
+		TextColor3 = C.version,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, header)
+	local dotX = W - 11 - 56 - 8
+	local ring = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(dotX, 21),
+		Size = UDim2.fromOffset(7, 7),
+		BackgroundColor3 = C.online,
+		BackgroundTransparency = 0.45,
+		BorderSizePixel = 0,
+	}, header)
+	M.corner(ring, 99)
+	local ringLoop = TweenService:Create(ring, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1), {
+		Size = UDim2.fromOffset(22, 22),
+		BackgroundTransparency = 1,
+	})
+	ringLoop:Play()
+	M.loops[#M.loops + 1] = ringLoop
+	local dot = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(dotX, 21),
+		Size = UDim2.fromOffset(7, 7),
+		BackgroundColor3 = C.online,
+		BorderSizePixel = 0,
+	}, header)
+	M.corner(dot, 99)
+
+	-- Перетаскивание окна за шапку
+	local dragging = false
+	local dragStart, startPos
+	bind(header.InputBegan, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = root.Position
+		end
+	end)
+	bind(UserInputService.InputChanged, function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			root.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+	bind(UserInputService.InputEnded, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	-- Подгон размера окна под экран (ручной размер имеет приоритет)
+	M.fitScale = 1
+	M.isOpen = false
+	function M.curScale()
+		return M.manualScale or M.fitScale
+	end
+
+	function M.refit()
+		local camera = workspace.CurrentCamera
+		if not camera then return end
+		local view = camera.ViewportSize
+		M.fitScale = math.clamp(math.min(view.X * 0.96 / W, view.Y * 0.9 / H), 0.5, 1.6)
+		if M.isOpen then
+			rootScale.Scale = M.curScale()
+		end
+	end
+
+	-- Открытие и закрытие (бесконечные анимации шапки на паузе, пока меню закрыто)
+	function M.setOpen(open)
+		M.isOpen = open
+		local scale = M.curScale()
+		for _, loop in ipairs(M.loops) do
+			if open then loop:Play() else task.delay(0.3, function() if not M.isOpen then loop:Pause() end end) end
+		end
+		if open then
+			root.Visible = true
+			rootScale.Scale = scale * 0.92
+			window.GroupTransparency = 1
+			tw(window, 0.4, { GroupTransparency = 0 }, Enum.EasingStyle.Quad)
+			tw(rootScale, 0.5, { Scale = scale }, Enum.EasingStyle.Quint)
+			tw(M.edgeStroke, 0.4, { Transparency = 0.1 }, Enum.EasingStyle.Quad)
+			for _, shadow in ipairs(M.shadows) do
+				shadow.obj.BackgroundTransparency = 1
+				tw(shadow.obj, 0.5, { BackgroundTransparency = shadow.base }, Enum.EasingStyle.Quad)
+			end
+		else
+			tw(window, 0.25, { GroupTransparency = 1 }, Enum.EasingStyle.Quad)
+			tw(rootScale, 0.25, { Scale = scale * 0.94 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			tw(M.edgeStroke, 0.25, { Transparency = 1 }, Enum.EasingStyle.Quad)
+			for _, shadow in ipairs(M.shadows) do
+				tw(shadow.obj, 0.25, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quad)
+			end
+			task.delay(0.28, function()
+				if not M.isOpen then
+					root.Visible = false
+				end
+			end)
+		end
+	end
+
+	function M.toggle()
+		M.setOpen(not M.isOpen)
+	end
+
+	-- Линия снизу экрана по центру: нажми, чтобы открыть или закрыть меню
+	local handle = new("TextButton", {
+		Name = "Handle",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -3),
+		Size = UDim2.fromOffset(220, 28),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 50,
+	}, gui)
+	local handleLine = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(120, 4),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 0.5,
+		BorderSizePixel = 0,
+	}, handle)
+	M.corner(handleLine, 99)
+	bind(handle.MouseEnter, function()
+		tw(handleLine, 0.2, { Size = UDim2.fromOffset(160, 4), BackgroundTransparency = 0.15 })
+	end)
+	bind(handle.MouseLeave, function()
+		tw(handleLine, 0.25, { Size = UDim2.fromOffset(120, 4), BackgroundTransparency = 0.5 })
+	end)
+	bind(handle.Activated, function()
+		M.toggle()
+	end)
+
+	-- Клавиша K тоже открывает и закрывает
+	bind(UserInputService.InputBegan, function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.K then
+			M.toggle()
+		end
+	end)
+
+	-- ===== Уголок справа внизу: тянешь, чтобы менять размер меню вручную =====
+	local grip = new("TextButton", {
+		Name = "ResizeGrip",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -3, 1, -3),
+		Size = UDim2.fromOffset(34, 34),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 60,
+	}, root)
+	local gripBg = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(22, 22),
+		BackgroundColor3 = C.tabSel,
+		BackgroundTransparency = 0.1,
+		BorderSizePixel = 0,
+		ZIndex = 60,
+	}, grip)
+	M.corner(gripBg, 99)
+	local gripStroke = M.stroke(gripBg, C.accent, 1, 0.55)
+	local gripIcon = M.icon(gripBg, "resize", C.tabOn, 12)
+	gripIcon.holder.ZIndex = 61
+	for _, seg in ipairs(gripIcon.segs) do seg.ZIndex = 61 end
+	M.gripIcon = gripIcon
+
+	local resizing = false
+	local rStart, rStartScale, rStartPos
+	local lastTap = 0
+	bind(grip.MouseEnter, function()
+		tw(gripBg, 0.18, { Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 0 })
+		tw(gripStroke, 0.18, { Transparency = 0.1 })
+	end)
+	bind(grip.MouseLeave, function()
+		if not resizing then
+			tw(gripBg, 0.22, { Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 0.1 })
+			tw(gripStroke, 0.22, { Transparency = 0.55 })
+		end
+	end)
+	bind(grip.InputBegan, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			resizing = true
+			rStart = input.Position
+			rStartScale = rootScale.Scale
+			rStartPos = root.Position
+			tw(gripBg, 0.15, { Size = UDim2.fromOffset(28, 28) }, Enum.EasingStyle.Back)
+			tw(gripStroke, 0.15, { Transparency = 0 })
+			-- двойное касание: вернуть размер по умолчанию
+			if os.clock() - lastTap < 0.35 then
+				resizing = false
+				M.manualScale = nil
+				M.refit()
+				tw(rootScale, 0.3, { Scale = M.fitScale }, Enum.EasingStyle.Back)
+				if M.toast then M.toast("Size reset") end
+			end
+			lastTap = os.clock()
+		end
+	end)
+	bind(UserInputService.InputChanged, function(input)
+		if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - rStart
+			-- по диагонали: ширина и высота растут вместе
+			local grow = (delta.X + delta.Y * (W / H)) / 2
+			local wanted = (W * rStartScale + grow) / W
+			local newScale = math.clamp(wanted, 0.45, math.max(M.fitScale * 1.6, 1))
+			M.manualScale = newScale
+			rootScale.Scale = newScale
+			-- верхний левый угол остаётся на месте, угол тянется за пальцем
+			local diff = newScale - rStartScale
+			root.Position = UDim2.new(
+				rStartPos.X.Scale, rStartPos.X.Offset + W * diff / 2,
+				rStartPos.Y.Scale, rStartPos.Y.Offset + H * diff / 2
+			)
+		end
+	end)
+	bind(UserInputService.InputEnded, function(input)
+		if resizing and (input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			resizing = false
+			tw(gripBg, 0.22, { Size = UDim2.fromOffset(22, 22) }, Enum.EasingStyle.Back)
+			tw(gripStroke, 0.22, { Transparency = 0.55 })
+		end
+	end)
+
+	M.refit()
+end)
+
+end
+-- A-mod menu | ЧАСТЬ 3/5: боковая панель с иконками Lucide и эффект вкладки
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+	M.run(function()
+		local C, new, corner, tw, bind = M.C, M.new, M.corner, M.tw, M.bind
+		local window = M.window
+		local HEADER_H, SIDE_W, CW, CH = M.HEADER_H, M.SIDE_W, M.CW, M.CH
+
+		local TAB_NAMES = { "Main", "Players", "Visuals", "Misc", "Skins", "Colors", "Settings" }
+		local TAB_ICONS = { "home", "users", "eye", "box", "gem", "palette", "settings" }
+		local TAB_W, TAB_H, TAB_PITCH, TAB_TOP = 49, 48, 49, 2
+		M.TAB_NAMES = TAB_NAMES
+
+		local function tabTop(index)
+			return TAB_TOP + (index - 1) * TAB_PITCH
+		end
+
+		local sidebar = new("Frame", {
+			Name = "Sidebar",
+			Position = UDim2.fromOffset(0, HEADER_H),
+			Size = UDim2.fromOffset(SIDE_W, CH),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BorderSizePixel = 0,
+		}, window)
+		new("UIGradient", {
+			Rotation = 90,
+			Color = ColorSequence.new(Color3.fromRGB(20, 25, 36), Color3.fromRGB(16, 20, 29)),
+		}, sidebar)
+		new("Frame", {
+			Name = "Edge",
+			Position = UDim2.fromOffset(SIDE_W - 1, 0),
+			Size = UDim2.fromOffset(1, CH),
+			BackgroundColor3 = C.sideEdge,
+			BorderSizePixel = 0,
+		}, sidebar)
+		M.sidebar = sidebar
+
+		-- Фон при наведении (под подсветкой и под иконками)
+		local hoverFrames = {}
+		for index = 1, #TAB_NAMES do
+			local hover = new("Frame", {
+				Name = "Hover" .. index,
+				Position = UDim2.fromOffset(2, tabTop(index)),
+				Size = UDim2.fromOffset(TAB_W, TAB_H),
+				BackgroundColor3 = C.tabHover,
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+			}, sidebar)
+			corner(hover, 2)
+			hoverFrames[index] = hover
+		end
+
+		-- Подсветка выбранной вкладки: заливка-градиент, тонкая рамка, свечение и яркая линия слева
+		local highlight = new("Frame", {
+			Name = "Highlight",
+			Position = UDim2.fromOffset(2, tabTop(4)),
+			Size = UDim2.fromOffset(TAB_W, TAB_H),
+			BackgroundColor3 = C.tabSel,
+			BorderSizePixel = 0,
+		}, sidebar)
+		corner(highlight, 3)
+		highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		new("UIGradient", {
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 44, 76)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(23, 28, 46)),
+			}),
+		}, highlight)
+		local hlStroke = M.stroke(highlight, C.accent, 1, 0.82)
+		local glow = new("Frame", {
+			Name = "Glow",
+			Size = UDim2.fromOffset(22, TAB_H),
+			BackgroundColor3 = C.accent,
+			BackgroundTransparency = 0.7,
+			BorderSizePixel = 0,
+		}, highlight)
+		new("UIGradient", {
+			Transparency = NumberSequence.new(0, 1),
+		}, glow)
+		local bar = new("Frame", {
+			Name = "Bar",
+			Size = UDim2.fromOffset(3, TAB_H),
+			BackgroundColor3 = Color3.fromRGB(110, 158, 252),
+			BorderSizePixel = 0,
+		}, highlight)
+		corner(bar, 2)
+		M.hlStroke = hlStroke
+		M.highlight = highlight
+
+		-- Кнопки вкладок: иконки Lucide
+		M.tabButtons = {}
+		M.tabIcons = {}
+		M.currentTab = nil
+
+		for index, name in ipairs(TAB_NAMES) do
+			local button = new("TextButton", {
+				Name = "Tab" .. index,
+				Position = UDim2.fromOffset(2, tabTop(index)),
+				Size = UDim2.fromOffset(TAB_W, TAB_H),
+				BackgroundTransparency = 1,
+				Text = "",
+				AutoButtonColor = false,
+			}, sidebar)
+			local icon = M.icon(button, TAB_ICONS[index], C.tabOff, 21)
+			icon.holder.Position = UDim2.new(0.5, 1, 0.5, 0)
+			M.tabIcons[index] = icon
+			local scale = new("UIScale", { Scale = 1 }, button)
+			M.tabButtons[index] = button
+
+			bind(button.MouseEnter, function()
+				tw(hoverFrames[index], 0.18, { BackgroundTransparency = 0.35 }, Enum.EasingStyle.Quad)
+				if M.currentTab ~= index then
+					M.tint(M.tabIcons[index], Color3.fromRGB(130, 146, 210), 0.18)
+					tw(M.tabIcons[index].scale, 0.18, { Scale = 1.08 }, Enum.EasingStyle.Quad)
+				end
+			end)
+			bind(button.MouseLeave, function()
+				tw(hoverFrames[index], 0.22, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quad)
+				if M.currentTab ~= index then
+					M.tint(M.tabIcons[index], C.tabOff, 0.22)
+					tw(M.tabIcons[index].scale, 0.22, { Scale = 1 }, Enum.EasingStyle.Quad)
+				end
+				tw(scale, 0.12, { Scale = 1 }, Enum.EasingStyle.Quad)
+			end)
+			bind(button.MouseButton1Down, function()
+				tw(scale, 0.1, { Scale = 0.92 }, Enum.EasingStyle.Quad)
+			end)
+			bind(button.MouseButton1Up, function()
+				tw(scale, 0.18, { Scale = 1 }, Enum.EasingStyle.Back)
+			end)
+			bind(button.Activated, function()
+				M.selectTab(index)
+			end)
+		end
+
+		-- Выбор вкладки: подсветка переезжает, иконки меняют цвет и размер
+		function M.selectTab(index, instant)
+			if M.currentTab == index then return end
+			M.currentTab = index
+			local target = UDim2.fromOffset(2, tabTop(index))
+			if instant then
+				highlight.Position = target
+			else
+				tw(highlight, 0.34, { Position = target }, Enum.EasingStyle.Quint)
+			end
+			for i, iconObj in ipairs(M.tabIcons) do
+				local color = (i == index) and C.tabOn or C.tabOff
+				local size = (i == index) and 1.12 or 1
+				if instant then
+					M.tint(iconObj, color)
+					iconObj.scale.Scale = size
+				else
+					M.tint(iconObj, color, 0.25)
+					tw(iconObj.scale, 0.3, { Scale = size }, Enum.EasingStyle.Back)
+				end
+			end
+			if M.onTabSelected then
+				M.onTabSelected(index)
+			end
+		end
+
+		local pagesFrame = new("Frame", {
+			Name = "Content",
+			Position = UDim2.fromOffset(SIDE_W, HEADER_H),
+			Size = UDim2.fromOffset(CW, CH),
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+		}, window)
+		M.pagesFrame = pagesFrame
+	end)
+end
+-- A-mod menu | ЧАСТЬ 4/5: компоненты (галочки, ползунки, панели, скролл)
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+	M.run(function()
+		local C, new, corner, stroke, tw, bind = M.C, M.new, M.corner, M.stroke, M.tw, M.bind
+		local FONT = M.FONT
+		local UserInputService = game:GetService("UserInputService")
+
+		M.controls = {}
+
+		function M.setScrollLock(locked)
+			for _, scroller in ipairs(M.scrollFrames) do
+				scroller.ScrollingEnabled = not locked
+			end
+		end
+
+		local function segment(parent, x1, y1, x2, y2, thickness, size, color)
+			local dx, dy = x2 - x1, y2 - y1
+			local length = math.sqrt(dx * dx + dy * dy)
+			local frame = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale((x1 + x2) / 2 / size, (y1 + y2) / 2 / size),
+				Size = UDim2.fromScale((length + thickness * 0.5) / size, thickness / size),
+				Rotation = math.deg(math.atan2(dy, dx)),
+				BackgroundColor3 = color,
+				BorderSizePixel = 0,
+			}, parent)
+			corner(frame, 99)
+			return frame
+		end
+
+		local function fadeLine(parent, x, y, width)
+			local line = new("Frame", {
+				Position = UDim2.fromOffset(x, y),
+				Size = width,
+				BackgroundColor3 = C.line,
+				BorderSizePixel = 0,
+			}, parent)
+			new("UIGradient", {
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.9),
+					NumberSequenceKeypoint.new(0.5, 0),
+					NumberSequenceKeypoint.new(1, 0.9),
+				}),
+			}, line)
+			return line
+		end
+		M.fadeLine = fadeLine
+
+		local function sectionHeader(parent, order, text)
+			local block = new("Frame", {
+				Name = "Section",
+				LayoutOrder = order,
+				Size = UDim2.new(1, 0, 0, 43),
+				BackgroundTransparency = 1,
+			}, parent)
+			new("Frame", {
+				Position = UDim2.fromOffset(0, 9),
+				Size = UDim2.fromOffset(2, 13),
+				BackgroundColor3 = C.sectionBar,
+				BorderSizePixel = 0,
+			}, block)
+			new("TextLabel", {
+				Position = UDim2.fromOffset(9, 0),
+				Size = UDim2.new(1, -9, 0, 30),
+				BackgroundTransparency = 1,
+				Text = text,
+				Font = FONT,
+				TextSize = 13,
+				TextColor3 = C.section,
+				TextXAlignment = Enum.TextXAlignment.Left,
+			}, block)
+			fadeLine(block, 0, 35, UDim2.new(1, 0, 0, 1))
+			return block
+		end
+
+		function M.checkRow(parent, order, text, initial, indent, textSize)
+			local x0 = indent or 0
+			local row = new("TextButton", {
+				Name = "Check",
+				LayoutOrder = order,
+				Size = UDim2.new(1, 0, 0, 22),
+				BackgroundTransparency = 1,
+				Text = "",
+				AutoButtonColor = false,
+			}, parent)
+			local box = new("Frame", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, x0, 0.5, 0),
+				Size = UDim2.fromOffset(15, 15),
+				BackgroundColor3 = initial and C.boxOn or C.boxOff,
+				BorderSizePixel = 0,
+			}, row)
+			corner(box, 3)
+			local boxStroke = stroke(box, initial and C.boxOn or C.boxEdge, 1, 0)
+			local boxScale = new("UIScale", { Scale = 1 }, box)
+			local mark = new("Frame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				Visible = initial,
+			}, box)
+			local markScale = new("UIScale", { Scale = initial and 1 or 0.2 }, mark)
+			segment(mark, 3.4, 7.6, 6.2, 10.2, 2, 15, C.check)
+			segment(mark, 6.2, 10.2, 11.6, 4.8, 2, 15, C.check)
+			local label = new("TextLabel", {
+				Position = UDim2.new(0, x0 + 22, 0, 0),
+				Size = UDim2.new(1, -(x0 + 22), 1, 0),
+				BackgroundTransparency = 1,
+				Text = text,
+				Font = FONT,
+				TextSize = textSize or 12,
+				TextColor3 = C.label,
+				TextXAlignment = Enum.TextXAlignment.Left,
+			}, row)
+
+			local control = { row = row, text = text }
+			local state = initial
+			local token = 0
+
+			function control.get()
+				return state
+			end
+
+			function control.set(value, animate)
+				state = value
+				token = token + 1
+				local mine = token
+				local boxColor = value and C.boxOn or C.boxOff
+				local edgeColor = value and C.boxOn or C.boxEdge
+				if animate == false then
+					box.BackgroundColor3 = boxColor
+					boxStroke.Color = edgeColor
+					mark.Visible = value
+					markScale.Scale = value and 1 or 0.2
+					return
+				end
+				tw(box, 0.16, { BackgroundColor3 = boxColor }, Enum.EasingStyle.Quad)
+				tw(boxStroke, 0.16, { Color = edgeColor }, Enum.EasingStyle.Quad)
+				if value then
+					mark.Visible = true
+					markScale.Scale = 0.2
+					tw(markScale, 0.26, { Scale = 1 }, Enum.EasingStyle.Back)
+				else
+					tw(markScale, 0.14, { Scale = 0.2 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+					task.delay(0.15, function()
+						if token == mine and not state then
+							mark.Visible = false
+						end
+					end)
+				end
+			end
+
+			row.MouseEnter:Connect(function()
+				tw(label, 0.12, { TextColor3 = C.labelHover }, Enum.EasingStyle.Quad)
+				if not state then
+					tw(boxStroke, 0.12, { Color = C.accent }, Enum.EasingStyle.Quad)
+				end
+			end)
+			row.MouseLeave:Connect(function()
+				tw(label, 0.18, { TextColor3 = C.label }, Enum.EasingStyle.Quad)
+				tw(boxStroke, 0.18, { Color = state and C.boxOn or C.boxEdge }, Enum.EasingStyle.Quad)
+				tw(boxScale, 0.12, { Scale = 1 }, Enum.EasingStyle.Quad)
+			end)
+			row.MouseButton1Down:Connect(function()
+				tw(boxScale, 0.1, { Scale = 0.85 }, Enum.EasingStyle.Quad)
+			end)
+			row.MouseButton1Up:Connect(function()
+				tw(boxScale, 0.2, { Scale = 1 }, Enum.EasingStyle.Back)
+			end)
+			row.Activated:Connect(function()
+				control.set(not state)
+				if control.onChanged then
+					control.onChanged(state)
+				end
+			end)
+
+			M.controls[text] = control
+			return control
+		end
+
+		function M.sliderRow(parent, order, text, minValue, maxValue, initial, decimals, rowWidth)
+			local labelWidth = 78
+			local trackWidth = math.min(173, rowWidth - labelWidth - 4)
+			local minCenter, maxCenter = 11, trackWidth - 37
+			local row = new("Frame", {
+				Name = "Slider",
+				LayoutOrder = order,
+				Size = UDim2.new(1, 0, 0, 30),
+				BackgroundTransparency = 1,
+			}, parent)
+			new("TextLabel", {
+				Size = UDim2.fromOffset(labelWidth, 30),
+				BackgroundTransparency = 1,
+				Text = text,
+				Font = FONT,
+				TextSize = 12,
+				TextColor3 = C.label,
+				TextXAlignment = Enum.TextXAlignment.Left,
+			}, row)
+			local track = new("Frame", {
+				Position = UDim2.fromOffset(labelWidth + 4, 3),
+				Size = UDim2.fromOffset(trackWidth, 23),
+				BackgroundColor3 = C.trackBg,
+				BorderSizePixel = 0,
+			}, row)
+			corner(track, 99)
+			local fill = new("Frame", {
+				Size = UDim2.new(0.5, 0, 1, 0),
+				BackgroundColor3 = C.fill,
+				BorderSizePixel = 0,
+			}, track)
+			corner(fill, 99)
+			local knob = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(18, 18),
+				BackgroundColor3 = C.knob,
+				BorderSizePixel = 0,
+				ZIndex = 2,
+			}, track)
+			corner(knob, 99)
+			local knobScale = new("UIScale", { Scale = 1 }, knob)
+			local knobCore = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(8, 8),
+				BackgroundColor3 = C.fill,
+				BorderSizePixel = 0,
+				ZIndex = 3,
+			}, knob)
+			corner(knobCore, 99)
+			local valueLabel = new("TextLabel", {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.fromOffset(trackWidth - 6, 0),
+				Size = UDim2.fromOffset(30, 23),
+				BackgroundTransparency = 1,
+				Font = FONT,
+				TextSize = 12,
+				TextColor3 = C.value,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				ZIndex = 2,
+			}, track)
+
+			local format = "%." .. tostring(decimals or 0) .. "f"
+			local step = 10 ^ -(decimals or 0)
+			local control = { row = row, text = text, value = initial }
+
+			local function render(fraction, animate)
+				local center = minCenter + fraction * (maxCenter - minCenter)
+				local knobPos = UDim2.fromScale(center / trackWidth, 0.5)
+				local fillSize = UDim2.new((center + 3) / trackWidth, 0, 1, 0)
+				if animate then
+					tw(knob, 0.14, { Position = knobPos }, Enum.EasingStyle.Quad)
+					tw(fill, 0.14, { Size = fillSize }, Enum.EasingStyle.Quad)
+				else
+					knob.Position = knobPos
+					fill.Size = fillSize
+				end
+			end
+
+			function control.set(value, animate)
+				value = math.clamp(value, minValue, maxValue)
+				control.value = value
+				render((value - minValue) / (maxValue - minValue), animate)
+				valueLabel.Text = string.format(format, value)
+			end
+
+			function control.get()
+				return control.value
+			end
+
+			function control.update(screenX, animate)
+				local relative = (screenX - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1) * trackWidth
+				local fraction = math.clamp((relative - minCenter) / (maxCenter - minCenter), 0, 1)
+				local raw = minValue + fraction * (maxValue - minValue)
+				local value = math.floor(raw / step + 0.5) * step
+				control.set(value, animate)
+				if control.onChanged then
+					control.onChanged(control.value)
+				end
+			end
+
+			control.set(initial, false)
+
+			track.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1
+					or input.UserInputType == Enum.UserInputType.Touch then
+					M.activeSlider = control
+					M.activeKnobScale = knobScale
+					M.setScrollLock(true)
+					tw(knobScale, 0.14, { Scale = 1.18 }, Enum.EasingStyle.Back)
+					control.update(input.Position.X, true)
+				end
+			end)
+
+			M.controls[text] = control
+			return control
+		end
+
+		bind(UserInputService.InputChanged, function(input)
+			if M.activeSlider and (input.UserInputType == Enum.UserInputType.MouseMovement
+				or input.UserInputType == Enum.UserInputType.Touch) then
+				M.activeSlider.update(input.Position.X, false)
+			end
+		end)
+		bind(UserInputService.InputEnded, function(input)
+			if M.activeSlider and (input.UserInputType == Enum.UserInputType.MouseButton1
+				or input.UserInputType == Enum.UserInputType.Touch) then
+				if M.activeKnobScale then
+					tw(M.activeKnobScale, 0.2, { Scale = 1 }, Enum.EasingStyle.Back)
+				end
+				M.activeSlider = nil
+				M.activeKnobScale = nil
+				M.setScrollLock(false)
+			end
+		end)
+
+		local function attachFades(body, panel)
+			local function makeFade(atTop)
+				local fade = new("Frame", {
+					Position = atTop and UDim2.fromOffset(1, 1) or UDim2.new(0, 1, 1, -17),
+					Size = UDim2.new(1, -6, 0, 16),
+					BackgroundColor3 = C.panel,
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ZIndex = 5,
+				}, panel)
+				new("UIGradient", {
+					Rotation = 90,
+					Transparency = NumberSequence.new({
+						NumberSequenceKeypoint.new(0, atTop and 0 or 1),
+						NumberSequenceKeypoint.new(1, atTop and 1 or 0),
+					}),
+				}, fade)
+				return fade
+			end
+			local topFade, bottomFade = makeFade(true), makeFade(false)
+			local topOn, bottomOn = false, false
+			local function refresh()
+				local maxY = body.AbsoluteCanvasSize.Y - body.AbsoluteWindowSize.Y
+				local y = body.CanvasPosition.Y
+				local wantTop = y > 2
+				local wantBottom = maxY - y > 2
+				if wantTop ~= topOn then
+					topOn = wantTop
+					tw(topFade, 0.2, { BackgroundTransparency = wantTop and 0 or 1 }, Enum.EasingStyle.Quad)
+				end
+				if wantBottom ~= bottomOn then
+					bottomOn = wantBottom
+					tw(bottomFade, 0.2, { BackgroundTransparency = wantBottom and 0 or 1 }, Enum.EasingStyle.Quad)
+				end
+			end
+			body:GetPropertyChangedSignal("CanvasPosition"):Connect(refresh)
+			body:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(refresh)
+			body:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(refresh)
+			task.defer(refresh)
+		end
+
+		-- sections = { { title = "...", rows = { ... } } }
+		-- { "check", "Текст", включено, отступ } или { "slider", "Текст:", мин, макс, значение, знаков }
+		function M.buildPanel(parent, x, y, width, height, sections)
+			local panel = new("Frame", {
+				Position = UDim2.fromOffset(x, y),
+				Size = UDim2.fromOffset(width, height),
+				BackgroundColor3 = C.panel,
+				BorderSizePixel = 0,
+				ClipsDescendants = true,
+			}, parent)
+			corner(panel, 2)
+			stroke(panel, C.panelEdge, 1, 0)
+
+			local body = new("ScrollingFrame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				ScrollBarThickness = 3,
+				ScrollBarImageColor3 = C.scroll,
+				CanvasSize = UDim2.new(),
+				AutomaticCanvasSize = Enum.AutomaticSize.Y,
+				ScrollingDirection = Enum.ScrollingDirection.Y,
+				VerticalScrollBarInset = Enum.ScrollBarInset.None,
+			}, panel)
+			new("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }, body)
+			new("UIPadding", {
+				PaddingLeft = UDim.new(0, 8),
+				PaddingRight = UDim.new(0, 12),
+				PaddingBottom = UDim.new(0, 8),
+			}, body)
+			M.scrollFrames[#M.scrollFrames + 1] = body
+
+			local rowWidth = width - 20
+			local order = 0
+			for _, section in ipairs(sections) do
+				order = order + 1
+				sectionHeader(body, order, section.title)
+				for _, row in ipairs(section.rows) do
+					order = order + 1
+					if row[1] == "check" then
+						M.checkRow(body, order, row[2], row[3], row[4])
+					else
+						M.sliderRow(body, order, row[2], row[3], row[4], row[5], row[6], rowWidth)
+					end
+				end
+			end
+
+			attachFades(body, panel)
+			return panel, body
+		end
+
+		function M.buildMaster(parent, x, y, width, text, initial)
+			local holder = new("Frame", {
+				Position = UDim2.fromOffset(x, y),
+				Size = UDim2.fromOffset(width, 31),
+				BackgroundTransparency = 1,
+			}, parent)
+			local control = M.checkRow(holder, 0, text, initial, 0, 13)
+			control.row.Position = UDim2.fromOffset(10, 0)
+			control.row.Size = UDim2.new(1, -10, 0, 30)
+			fadeLine(holder, 0, 30, UDim2.new(1, 0, 0, 1))
+			return control
+		end
+	end)
+end
+-- A-mod menu | ЧАСТЬ 5/5: страницы, переключение вкладок, уведомления, запуск
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+	M.run(function()
+		local C, new, corner = M.C, M.new, M.corner
+		local FONT = M.FONT
+		local TweenService = game:GetService("TweenService")
+
+		if not M.pagesFrame or not M.buildPanel then
+			error("Сначала запусти части 1-4")
+		end
+
+		local page = new("Frame", {
+			Name = "Page",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+		}, M.pagesFrame)
+		M.page = page
+
+		new("Frame", {
+			Position = UDim2.fromOffset(9, 11),
+			Size = UDim2.fromOffset(2, 13),
+			BackgroundColor3 = C.sectionBar,
+			BorderSizePixel = 0,
+		}, page)
+		new("TextLabel", {
+			Name = "PageTitle",
+			Position = UDim2.fromOffset(17, 4),
+			Size = UDim2.fromOffset(300, 26),
+			BackgroundTransparency = 1,
+			Text = "Miscellaneous",
+			Font = FONT,
+			TextSize = 14,
+			TextColor3 = C.section,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, page)
+		M.fadeLine(page, 9, 36, UDim2.fromOffset(M.CW - 9 - 11, 1))
+
+		M.buildPanel(page, 9, 48, 261, 296, {
+			{
+				title = "Global",
+				rows = {
+					{ "check", "BunnyHop", false },
+					{ "check", "Anti Flash", true },
+					{ "check", "Hit Sounds", false },
+					{ "check", "C4 Timer Window", true },
+					{ "check", "Planted C4", true },
+					{ "check", "Dropped C4", true },
+					{ "check", "C4 Holder Indicator", true },
+					{ "check", "Spectator List", true },
+					{ "check", "Watermark", true },
+				},
+			},
+		})
+
+		local master = M.buildMaster(page, 278, 48, 292, "Enable Nade Prediction", true)
+
+		local rightPanel = M.buildPanel(page, 278, 85, 292, 251, {
+			{
+				title = "Prediction",
+				rows = {
+					{ "check", "Projectile Paths", true },
+					{ "check", "Local Preview", true },
+					{ "check", "Only When Pin Pulled", true, 14 },
+					{ "check", "Damage Prediction", true },
+					{ "check", "Flash %% Prediction", true },
+					{ "check", "Radius Ring", true },
+					{ "slider", "Thickness:", 0.5, 4.3, 4.1, 1 },
+				},
+			},
+			{
+				title = "Projectile Filter",
+				rows = {
+					{ "check", "HE Grenade", true },
+					{ "check", "Flashbang", true },
+					{ "check", "Smoke Grenade", true },
+					{ "check", "Molotov", true },
+					{ "check", "Decoy", false },
+				},
+			},
+		})
+
+		local shade = new("Frame", {
+			Name = "Shade",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = C.bg,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Active = false,
+			Visible = false,
+			ZIndex = 20,
+		}, rightPanel)
+		corner(shade, 2)
+		local shadeToken = 0
+		master.onChanged = function(enabled)
+			shadeToken = shadeToken + 1
+			local mine = shadeToken
+			if enabled then
+				shade.Active = false
+				TweenService:Create(shade, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+					BackgroundTransparency = 1,
+				}):Play()
+				task.delay(0.27, function()
+					if shadeToken == mine then
+						shade.Visible = false
+					end
+				end)
+			else
+				shade.Visible = true
+				shade.Active = true
+				TweenService:Create(shade, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+					BackgroundTransparency = 0.45,
+				}):Play()
+			end
+		end
+
+		-- ===== Остальные вкладки: свои страницы с плавным переключением =====
+		local TS = game:GetService("TweenService")
+		M.pageList = { [4] = page }
+		local defs = {
+			[1] = { "Main", { { title = "General", rows = {
+				{ "check", "Enabled", true }, { "check", "Auto Save", true },
+				{ "check", "Show Hints", false }, { "check", "Smooth Mode", true } } } },
+				{ { title = "Options", rows = {
+				{ "check", "Compact Layout", false }, { "check", "Sounds", true },
+				{ "slider", "Opacity:", 0.3, 1, 1, 2 } } } } },
+			[2] = { "Players", { { title = "List", rows = {
+				{ "check", "Show Names", true }, { "check", "Show Distance", false },
+				{ "check", "Team Colors", true } } } },
+				{ { title = "Filter", rows = {
+				{ "check", "Only Friends", false }, { "check", "Hide Dead", true },
+				{ "slider", "Range:", 50, 1000, 500, 0 } } } } },
+			[3] = { "Visuals", { { title = "World", rows = {
+				{ "check", "Fullbright", false }, { "check", "No Fog", true },
+				{ "check", "Custom FOV", false }, { "slider", "FOV:", 40, 120, 70, 0 } } } },
+				{ { title = "Interface", rows = {
+				{ "check", "Crosshair", true }, { "check", "Hit Marker", true },
+				{ "check", "Damage Numbers", false } } } } },
+			[5] = { "Skins", { { title = "Weapons", rows = {
+				{ "check", "Custom Skins", false }, { "check", "Random Skin", false },
+				{ "check", "Keep On Respawn", true } } } },
+				{ { title = "Models", rows = {
+				{ "check", "Knife Model", false }, { "check", "Gloves", false } } } } },
+			[6] = { "Colors", { { title = "Theme", rows = {
+				{ "check", "Rainbow Accent", false }, { "check", "Dark Header", true },
+				{ "slider", "Hue:", 0, 360, 215, 0 } } } },
+				{ { title = "Elements", rows = {
+				{ "check", "Tinted Boxes", true }, { "check", "Glow", true },
+				{ "slider", "Glow Size:", 0, 10, 4, 1 } } } } },
+			[7] = { "Settings", { { title = "Menu", rows = {
+				{ "check", "Open With K", true }, { "check", "Fade Animations", true },
+				{ "check", "Lock Position", false } } } },
+				{ { title = "Config", rows = {
+				{ "check", "Auto Load Config", true }, { "check", "Notifications", true },
+				{ "slider", "UI Scale:", 0.6, 1.4, 1, 2 } } } } },
+		}
+		for index, def in pairs(defs) do
+			local pg = new("Frame", {
+				Name = "Page" .. index, Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1, Visible = false,
+			}, M.pagesFrame)
+			new("Frame", { Position = UDim2.fromOffset(9, 11), Size = UDim2.fromOffset(2, 13),
+				BackgroundColor3 = C.sectionBar, BorderSizePixel = 0 }, pg)
+			new("TextLabel", { Position = UDim2.fromOffset(17, 4), Size = UDim2.fromOffset(300, 26),
+				BackgroundTransparency = 1, Text = def[1], Font = FONT, TextSize = 14,
+				TextColor3 = C.section, TextXAlignment = Enum.TextXAlignment.Left }, pg)
+			M.fadeLine(pg, 9, 36, UDim2.fromOffset(M.CW - 9 - 11, 1))
+			M.buildPanel(pg, 9, 48, 261, 296, def[2])
+			M.buildPanel(pg, 278, 48, 292, 296, def[3])
+			M.pageList[index] = pg
+		end
+
+		-- Переключение: старая страница скрывается, новая выезжает справа
+		local shown = 4
+		M.onTabSelected = function(index)
+			local nextPage = M.pageList[index]
+			if not nextPage or index == shown then return end
+			local old = M.pageList[shown]
+			shown = index
+			if old then old.Visible = false end
+			nextPage.Position = UDim2.fromOffset(16, 0)
+			nextPage.Visible = true
+			TS:Create(nextPage, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {
+				Position = UDim2.fromOffset(0, 0),
+			}):Play()
+		end
+
+		-- Уведомление снизу окна при смене вкладки
+		local toast = new("TextLabel", {
+			Name = "Toast", AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, 30), Size = UDim2.fromOffset(150, 22),
+			BackgroundColor3 = C.tabSel, TextColor3 = C.label, Font = FONT, TextSize = 12,
+			Text = "", ZIndex = 30,
+		}, M.window)
+		corner(toast, 11)
+		M.stroke(toast, C.accent, 1, 0.6)
+		local toastToken = 0
+		function M.toast(text)
+			toastToken = toastToken + 1
+			local mine = toastToken
+			toast.Text = text
+			TS:Create(toast, TweenInfo.new(0.3, Enum.EasingStyle.Quint), { Position = UDim2.new(0.5, 0, 1, -10) }):Play()
+			task.delay(1.6, function()
+				if toastToken == mine then
+					TS:Create(toast, TweenInfo.new(0.3, Enum.EasingStyle.Quint), { Position = UDim2.new(0.5, 0, 1, 30) }):Play()
+				end
+			end)
+		end
+		local prevTab = M.onTabSelected
+		M.onTabSelected = function(index)
+			prevTab(index)
+			M.toast(M.TAB_NAMES[index])
+		end
+	end)
+end
+
+-- ===== запуск =====
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+	M.run(function()
+		if not (M.selectTab and M.page and M.setOpen) then
+			error("Запусти части 1-4 по порядку")
+		end
+
+		M.selectTab(4, true)
+
+		M.refit()
+		local camera = workspace.CurrentCamera
+		if camera then
+			M.bind(camera:GetPropertyChangedSignal("ViewportSize"), function()
+				M.refit()
+			end)
+		end
+		M.bind(workspace:GetPropertyChangedSignal("CurrentCamera"), function()
+			M.refit()
+		end)
+
+		M.setOpen(true)
+
+		--   M.controls["Anti Flash"].onChanged = function(on) ... end
+		--   M.controls["Thickness:"].onChanged = function(value) ... end
+		--   M.onTabSelected = function(index) ... end
+		--   M.toggle() открыть/закрыть, M.destroy() убрать меню полностью
+	end)
+end
