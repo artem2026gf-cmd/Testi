@@ -1,0 +1,1177 @@
+-- A-mod menu | ЧАСТЬ 1/5: палитра, иконки (гладкие), окно, тени
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+if _G.AmodM and _G.AmodM.destroy then
+	pcall(_G.AmodM.destroy)
+end
+
+local M = {}
+_G.AmodM = M
+M.connections = {}
+M.scrollFrames = {}
+M.pages = {}
+M.shadows = {}
+M.loops = {}
+
+M.C = {
+	bg = Color3.fromRGB(16, 23, 33),
+	header = Color3.fromRGB(15, 18, 23),
+	sidebar = Color3.fromRGB(18, 22, 31),
+	sideEdge = Color3.fromRGB(28, 31, 40),
+	tabSel = Color3.fromRGB(25, 30, 49),
+	tabHover = Color3.fromRGB(22, 28, 42),
+	tabOn = Color3.fromRGB(110, 158, 252),
+	tabOff = Color3.fromRGB(86, 96, 150),
+	accent = Color3.fromRGB(96, 143, 230),
+	title = Color3.fromRGB(104, 145, 225),
+	subtitle = Color3.fromRGB(67, 69, 84),
+	online = Color3.fromRGB(110, 190, 125),
+	version = Color3.fromRGB(68, 72, 83),
+	section = Color3.fromRGB(119, 125, 149),
+	sectionBar = Color3.fromRGB(114, 137, 189),
+	label = Color3.fromRGB(228, 230, 242),
+	labelHover = Color3.fromRGB(255, 255, 255),
+	panel = Color3.fromRGB(18, 22, 33),
+	panelEdge = Color3.fromRGB(26, 30, 39),
+	line = Color3.fromRGB(36, 43, 61),
+	boxOff = Color3.fromRGB(31, 33, 45),
+	boxEdge = Color3.fromRGB(40, 45, 58),
+	boxOn = Color3.fromRGB(92, 142, 240),
+	check = Color3.fromRGB(235, 246, 255),
+	trackBg = Color3.fromRGB(10, 18, 39),
+	fill = Color3.fromRGB(91, 147, 245),
+	knob = Color3.fromRGB(253, 254, 255),
+	value = Color3.fromRGB(104, 144, 214),
+	scroll = Color3.fromRGB(67, 78, 132),
+	edge = Color3.fromRGB(30, 40, 64),
+}
+local C = M.C
+
+M.FONT = Enum.Font.Ubuntu
+
+M.W = 633
+M.H = 405
+M.HEADER_H = 52
+M.SIDE_W = 53
+M.CW = M.W - M.SIDE_W
+M.CH = M.H - M.HEADER_H
+
+function M.new(class, props, parent)
+	local obj = Instance.new(class)
+	for key, value in pairs(props) do
+		obj[key] = value
+	end
+	obj.Parent = parent
+	return obj
+end
+local new = M.new
+
+function M.corner(parent, radius)
+	return new("UICorner", { CornerRadius = UDim.new(0, radius) }, parent)
+end
+
+function M.stroke(parent, color, thickness, transparency)
+	return new("UIStroke", {
+		Color = color,
+		Thickness = thickness or 1,
+		Transparency = transparency or 0,
+	}, parent)
+end
+
+function M.tw(obj, duration, props, style, direction)
+	local tween = TweenService:Create(obj, TweenInfo.new(
+		duration,
+		style or Enum.EasingStyle.Quint,
+		direction or Enum.EasingDirection.Out
+	), props)
+	tween:Play()
+	return tween
+end
+local tw = M.tw
+
+function M.bind(signal, fn)
+	local connection = signal:Connect(fn)
+	M.connections[#M.connections + 1] = connection
+	return connection
+end
+local bind = M.bind
+
+-- ===== Иконки (Combat/меч, Players, Visuals и т.д.) =====
+-- bar x1 y1 x2 y2 w | dot cx cy r | ring cx cy r w [clipX clipY clipW clipH] | rrect x y w h rad w [rot]
+M.ICONS = {
+	sword = {
+		{"bar", 19.4, 4.6, 10.4, 13.6, 2.6},
+		{"bar", 7.6, 11.6, 12.4, 16.4, 2.2},
+		{"bar", 9.4, 14.6, 5.2, 18.8, 2.4},
+		{"dot", 4.4, 19.6, 1.5},
+	},
+	users = {
+		{"ring", 9, 8, 3.6, 2},
+		{"ring", 9, 20.5, 7, 2, 2, 14, 14, 6.5},
+		{"ring", 17.5, 8.6, 2.6, 1.8},
+		{"ring", 18, 19.5, 5, 1.8, 16.5, 14.6, 6, 4.9},
+	},
+	eye = {
+		{"ring", 12, 19.2, 11.2, 2, 0, 0, 24, 12},
+		{"ring", 12, 4.8, 11.2, 2, 0, 12, 24, 12},
+		{"ring", 12, 12, 3.2, 2},
+		{"dot", 12, 12, 1.1},
+	},
+	grid = {
+		{"rrect", 3, 3, 8, 8, 2.4, 2},
+		{"rrect", 13, 3, 8, 8, 2.4, 2},
+		{"rrect", 3, 13, 8, 8, 2.4, 2},
+		{"rrect", 13, 13, 8, 8, 2.4, 2},
+	},
+	gem = {
+		{"rrect", 5.2, 5.2, 13.6, 13.6, 3, 2, 45},
+		{"bar", 12, 5.2, 12, 18.8, 1.8},
+		{"bar", 5.2, 12, 18.8, 12, 1.8},
+	},
+	palette = {
+		{"ring", 12, 12, 9.6, 2},
+		{"dot", 8, 9.8, 1.5},
+		{"dot", 12, 7.4, 1.5},
+		{"dot", 16, 9.8, 1.5},
+		{"dot", 15.4, 15.2, 1.5},
+	},
+	sliders = {
+		{"bar", 3, 6, 11.5, 6, 2},
+		{"ring", 15, 6, 2.6, 2},
+		{"bar", 18.6, 6, 21, 6, 2},
+		{"bar", 3, 12, 5.4, 12, 2},
+		{"ring", 9, 12, 2.6, 2},
+		{"bar", 12.6, 12, 21, 12, 2},
+		{"bar", 3, 18, 12.4, 18, 2},
+		{"ring", 16, 18, 2.6, 2},
+		{"bar", 19.6, 18, 21, 18, 2},
+	},
+	resize = {
+		{"bar", 6.5, 17.5, 17.5, 6.5, 2},
+		{"bar", 11, 5.5, 18.5, 5.5, 2},
+		{"bar", 18.5, 5.5, 18.5, 13, 2},
+		{"bar", 5.5, 11, 5.5, 18.5, 2},
+		{"bar", 5.5, 18.5, 13, 18.5, 2},
+	},
+}
+
+-- Иконка из гладких примитивов. Все позиции и размеры в долях (Scale),
+-- поэтому нет округления до пикселей и "ломаных" линий.
+function M.icon(parent, name, color, size)
+	local holder = new("Frame", {
+		Name = "Icon_" .. name,
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(size, size),
+		BackgroundTransparency = 1,
+	}, parent)
+	local G = 24
+	local k = size / G
+	local items = {}
+
+	local function fillItem(obj)
+		items[#items + 1] = { obj = obj, kind = "fill" }
+	end
+	local function strokeItem(stroke)
+		items[#items + 1] = { obj = stroke, kind = "stroke" }
+	end
+	local function pill(obj)
+		new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, obj)
+	end
+	local function minThickness(w)
+		return math.max(w * k, 1.3)
+	end
+
+	for _, op in ipairs(M.ICONS[name]) do
+		local kind = op[1]
+		if kind == "bar" then
+			local x1, y1, x2, y2, w = op[2], op[3], op[4], op[5], op[6]
+			local cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+			local sx, sy, rot
+			if math.abs(y2 - y1) < 0.01 then
+				sx, sy, rot = math.abs(x2 - x1) + w, w, 0
+			elseif math.abs(x2 - x1) < 0.01 then
+				sx, sy, rot = w, math.abs(y2 - y1) + w, 0
+			else
+				local dx, dy = x2 - x1, y2 - y1
+				sx, sy, rot = math.sqrt(dx * dx + dy * dy) + w, w, math.deg(math.atan2(dy, dx))
+			end
+			local bar = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(cx / G, cy / G),
+				Size = UDim2.fromScale(sx / G, sy / G),
+				Rotation = rot,
+				BackgroundColor3 = color,
+				BorderSizePixel = 0,
+			}, holder)
+			pill(bar)
+			fillItem(bar)
+		elseif kind == "dot" then
+			local cx, cy, r = op[2], op[3], op[4]
+			local dot = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(cx / G, cy / G),
+				Size = UDim2.fromScale(2 * r / G, 2 * r / G),
+				BackgroundColor3 = color,
+				BorderSizePixel = 0,
+			}, holder)
+			pill(dot)
+			fillItem(dot)
+		elseif kind == "ring" then
+			local cx, cy, r, w = op[2], op[3], op[4], op[5]
+			local thick = minThickness(w)
+			local box = holder
+			local ox, oy = 0, 0
+			if op[6] then
+				-- кольцо обрезается прямоугольником (получается дуга)
+				box = new("Frame", {
+					Position = UDim2.fromScale(op[6] / G, op[7] / G),
+					Size = UDim2.fromScale(op[8] / G, op[9] / G),
+					BackgroundTransparency = 1,
+					ClipsDescendants = true,
+				}, holder)
+				ox, oy = op[6], op[7]
+			end
+			local frameRadius = r - (thick / k) / 2
+			local ringFrame = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+			}, box)
+			if op[6] then
+				ringFrame.Position = UDim2.fromScale((cx - ox) / op[8], (cy - oy) / op[9])
+				ringFrame.Size = UDim2.fromScale(2 * frameRadius / op[8], 2 * frameRadius / op[9])
+			else
+				ringFrame.Position = UDim2.fromScale(cx / G, cy / G)
+				ringFrame.Size = UDim2.fromScale(2 * frameRadius / G, 2 * frameRadius / G)
+			end
+			pill(ringFrame)
+			strokeItem(new("UIStroke", { Color = color, Thickness = thick }, ringFrame))
+		elseif kind == "rrect" then
+			local x, y, w, h, rad, sw, rot = op[2], op[3], op[4], op[5], op[6], op[7], op[8]
+			local thick = minThickness(sw)
+			local inner = thick / k
+			local rect = new("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale((x + w / 2) / G, (y + h / 2) / G),
+				Size = UDim2.fromScale((w - inner) / G, (h - inner) / G),
+				Rotation = rot or 0,
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+			}, holder)
+			new("UICorner", { CornerRadius = UDim.new(math.min(rad / math.min(w, h), 0.5), 0) }, rect)
+			strokeItem(new("UIStroke", { Color = color, Thickness = thick }, rect))
+		end
+	end
+
+	local scale = new("UIScale", { Scale = 1 }, holder)
+	return { holder = holder, items = items, scale = scale }
+end
+
+function M.tint(iconObj, color, duration)
+	for _, item in ipairs(iconObj.items) do
+		local props = item.kind == "fill" and { BackgroundColor3 = color } or { Color = color }
+		if duration and duration > 0 then
+			tw(item.obj, duration, props, Enum.EasingStyle.Quad)
+		else
+			for key, value in pairs(props) do
+				item.obj[key] = value
+			end
+		end
+	end
+end
+
+-- Куда класть интерфейс
+local parentGui
+local okHui, hui = pcall(function() return gethui and gethui() end)
+if okHui and hui then
+	parentGui = hui
+else
+	local okCore, core = pcall(function() return game:GetService("CoreGui") end)
+	if okCore and core then
+		parentGui = core
+	else
+		parentGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	end
+end
+M.parentGui = parentGui
+
+function M.fail(message)
+	warn("[A-mod] " .. tostring(message))
+	pcall(function()
+		local errGui = Instance.new("ScreenGui")
+		errGui.Name = "AmodErr"
+		errGui.ResetOnSpawn = false
+		errGui.DisplayOrder = 2000
+		errGui.Parent = parentGui
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(0.92, 0, 0, 150)
+		label.Position = UDim2.new(0.04, 0, 0, 10)
+		label.BackgroundColor3 = Color3.fromRGB(40, 12, 14)
+		label.TextColor3 = Color3.fromRGB(255, 120, 120)
+		label.TextWrapped = true
+		label.TextSize = 12
+		label.Font = Enum.Font.Code
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextYAlignment = Enum.TextYAlignment.Top
+		label.Text = "A-mod, ошибка:\n" .. tostring(message)
+		label.Parent = errGui
+		task.delay(40, function() errGui:Destroy() end)
+	end)
+end
+
+function M.run(fn)
+	local ok, err = xpcall(fn, function(e)
+		return tostring(e) .. "\n" .. debug.traceback()
+	end)
+	if not ok then
+		M.fail(err)
+	end
+	return ok
+end
+
+function M.destroy()
+	for _, connection in ipairs(M.connections) do
+		pcall(function() connection:Disconnect() end)
+	end
+	if M.gui then
+		M.gui:Destroy()
+	end
+	_G.AmodM = nil
+end
+
+M.run(function()
+	local W, H, HEADER_H = M.W, M.H, M.HEADER_H
+
+	local oldGui = parentGui:FindFirstChild("AmodMenu")
+	if oldGui then oldGui:Destroy() end
+
+	local gui = new("ScreenGui", {
+		Name = "AmodMenu",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 1000,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	}, parentGui)
+	M.gui = gui
+
+	local root = new("Frame", {
+		Name = "Root",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(W, H),
+		BackgroundTransparency = 1,
+		Visible = false,
+	}, gui)
+	local rootScale = new("UIScale", { Scale = 1 }, root)
+	M.root, M.rootScale = root, rootScale
+
+	for i = 1, 3 do
+		local shadow = new("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 0, 0.5, i * 2),
+			Size = UDim2.new(1, i * 10, 1, i * 10),
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.88 + i * 0.03,
+			BorderSizePixel = 0,
+			ZIndex = 0,
+		}, root)
+		M.corner(shadow, 3 + i * 4)
+		M.shadows[#M.shadows + 1] = { obj = shadow, base = 0.88 + i * 0.03 }
+	end
+
+	-- Обычный Frame вместо CanvasGroup: CanvasGroup рисуется в текстуру и из-за этого всё "пиксельное"
+	local window = new("Frame", {
+		Name = "Window",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = C.bg,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+		ZIndex = 1,
+	}, root)
+	M.corner(window, 3)
+	M.window = window
+
+	-- Плёнка цвета окна: на ней плавно проявляется и гаснет меню
+	M.veil = new("Frame", {
+		Name = "Veil",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = C.bg,
+		BackgroundTransparency = 0,
+		BorderSizePixel = 0,
+		ZIndex = 100,
+	}, window)
+
+	local edge = new("Frame", {
+		Name = "Edge",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		ZIndex = 5,
+	}, root)
+	M.corner(edge, 3)
+	M.edgeStroke = M.stroke(edge, C.edge, 1, 1)
+end)
+-- A-mod menu | ЧАСТЬ 2/5: шапка, перетаскивание, открытие/закрытие, длинная линия, уголок изменения размера
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+M.run(function()
+	local Players = game:GetService("Players")
+	local TweenService = game:GetService("TweenService")
+	local UserInputService = game:GetService("UserInputService")
+	local C, new, tw, bind = M.C, M.new, M.tw, M.bind
+	local W, H, HEADER_H = M.W, M.H, M.HEADER_H
+	local gui, root, window, rootScale, veil = M.gui, M.root, M.window, M.rootScale, M.veil
+	if not (gui and window) then error("Сначала запусти часть 1") end
+
+	local header = new("Frame", {
+		Name = "Header",
+		Size = UDim2.fromOffset(W, HEADER_H),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+	}, window)
+	new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(21, 28, 44)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(15, 18, 23)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 18, 23)),
+		}),
+	}, header)
+	new("Frame", {
+		Position = UDim2.fromOffset(0, HEADER_H - 1),
+		Size = UDim2.fromOffset(W, 1),
+		BackgroundColor3 = C.sideEdge,
+		BorderSizePixel = 0,
+	}, header)
+	M.header = header
+
+	local accentBar = new("Frame", {
+		Size = UDim2.fromOffset(3, HEADER_H),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+	}, header)
+	local accentGradient = new("UIGradient", {
+		Rotation = 90,
+		Offset = Vector2.new(0, -0.45),
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(66, 104, 192)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(128, 168, 250)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(66, 104, 192)),
+		}),
+	}, accentBar)
+	local accentLoop = TweenService:Create(accentGradient, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+		Offset = Vector2.new(0, 0.45),
+	})
+	accentLoop:Play()
+	M.loops[#M.loops + 1] = accentLoop
+
+	new("TextLabel", {
+		Name = "Title",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.fromOffset(13, 18),
+		Size = UDim2.fromOffset(220, 20),
+		BackgroundTransparency = 1,
+		Text = "A-mod",
+		Font = M.FONT,
+		TextSize = 17,
+		TextColor3 = C.title,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, header)
+	new("TextLabel", {
+		Name = "Subtitle",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.fromOffset(13, 36),
+		Size = UDim2.fromOffset(220, 18),
+		BackgroundTransparency = 1,
+		Text = "ROBLOX",
+		Font = M.FONT,
+		TextSize = 15,
+		TextColor3 = C.subtitle,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	}, header)
+
+	new("TextLabel", {
+		Name = "Online",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.fromOffset(W - 11, 21),
+		Size = UDim2.fromOffset(56, 18),
+		BackgroundTransparency = 1,
+		Text = "ONLINE",
+		Font = M.FONT,
+		TextSize = 15,
+		TextColor3 = C.online,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, header)
+	new("TextLabel", {
+		Name = "Version",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.fromOffset(W - 11, 38),
+		Size = UDim2.fromOffset(120, 16),
+		BackgroundTransparency = 1,
+		Text = "v3.0 - BETA",
+		Font = M.FONT,
+		TextSize = 12,
+		TextColor3 = C.version,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, header)
+	local dotX = W - 11 - 56 - 8
+	local ring = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(dotX, 21),
+		Size = UDim2.fromOffset(7, 7),
+		BackgroundColor3 = C.online,
+		BackgroundTransparency = 0.45,
+		BorderSizePixel = 0,
+	}, header)
+	M.corner(ring, 99)
+	local ringLoop = TweenService:Create(ring, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1), {
+		Size = UDim2.fromOffset(22, 22),
+		BackgroundTransparency = 1,
+	})
+	ringLoop:Play()
+	M.loops[#M.loops + 1] = ringLoop
+	local dot = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromOffset(dotX, 21),
+		Size = UDim2.fromOffset(7, 7),
+		BackgroundColor3 = C.online,
+		BorderSizePixel = 0,
+	}, header)
+	M.corner(dot, 99)
+
+	-- Перетаскивание окна за шапку
+	local dragging = false
+	local dragStart, startPos
+	bind(header.InputBegan, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = root.Position
+		end
+	end)
+	bind(UserInputService.InputChanged, function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			root.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+	bind(UserInputService.InputEnded, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	-- Подгон размера окна под экран (ручной размер имеет приоритет)
+	M.fitScale = 1
+	M.isOpen = false
+	function M.curScale()
+		return M.manualScale or M.fitScale
+	end
+
+	function M.refit()
+		local camera = workspace.CurrentCamera
+		if not camera then return end
+		local view = camera.ViewportSize
+		M.fitScale = math.clamp(math.min(view.X * 0.96 / W, view.Y * 0.9 / H), 0.5, 1.6)
+		if M.isOpen then
+			rootScale.Scale = M.curScale()
+		end
+	end
+
+	-- Открытие и закрытие (бесконечные анимации шапки на паузе, пока меню закрыто)
+	function M.setOpen(open)
+		M.isOpen = open
+		local scale = M.curScale()
+		for _, loop in ipairs(M.loops) do
+			if open then loop:Play() else task.delay(0.3, function() if not M.isOpen then loop:Pause() end end) end
+		end
+		if open then
+			root.Visible = true
+			rootScale.Scale = scale * 0.92
+			veil.BackgroundTransparency = 0
+			tw(veil, 0.4, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quad)
+			tw(rootScale, 0.5, { Scale = scale }, Enum.EasingStyle.Quint)
+			tw(M.edgeStroke, 0.4, { Transparency = 0.1 }, Enum.EasingStyle.Quad)
+			for _, shadow in ipairs(M.shadows) do
+				shadow.obj.BackgroundTransparency = 1
+				tw(shadow.obj, 0.5, { BackgroundTransparency = shadow.base }, Enum.EasingStyle.Quad)
+			end
+		else
+			tw(veil, 0.22, { BackgroundTransparency = 0 }, Enum.EasingStyle.Quad)
+			tw(rootScale, 0.25, { Scale = scale * 0.94 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			tw(M.edgeStroke, 0.25, { Transparency = 1 }, Enum.EasingStyle.Quad)
+			for _, shadow in ipairs(M.shadows) do
+				tw(shadow.obj, 0.25, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quad)
+			end
+			task.delay(0.28, function()
+				if not M.isOpen then
+					root.Visible = false
+				end
+			end)
+		end
+	end
+
+	function M.toggle()
+		M.setOpen(not M.isOpen)
+	end
+
+	-- Линия снизу экрана по центру: нажми, чтобы открыть или закрыть меню
+	local handle = new("TextButton", {
+		Name = "Handle",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -3),
+		Size = UDim2.fromOffset(220, 28),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 50,
+	}, gui)
+	local handleLine = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(120, 4),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 0.5,
+		BorderSizePixel = 0,
+	}, handle)
+	M.corner(handleLine, 99)
+	bind(handle.MouseEnter, function()
+		tw(handleLine, 0.2, { Size = UDim2.fromOffset(160, 4), BackgroundTransparency = 0.15 })
+	end)
+	bind(handle.MouseLeave, function()
+		tw(handleLine, 0.25, { Size = UDim2.fromOffset(120, 4), BackgroundTransparency = 0.5 })
+	end)
+	bind(handle.Activated, function()
+		M.toggle()
+	end)
+
+	-- Клавиша K тоже открывает и закрывает
+	bind(UserInputService.InputBegan, function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.K then
+			M.toggle()
+		end
+	end)
+
+	-- ===== Уголок справа внизу: тянешь, чтобы менять размер меню вручную =====
+	local grip = new("TextButton", {
+		Name = "ResizeGrip",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -3, 1, -3),
+		Size = UDim2.fromOffset(34, 34),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		ZIndex = 60,
+	}, root)
+	local gripBg = new("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(22, 22),
+		BackgroundColor3 = C.tabSel,
+		BackgroundTransparency = 0.1,
+		BorderSizePixel = 0,
+		ZIndex = 60,
+	}, grip)
+	M.corner(gripBg, 99)
+	local gripStroke = M.stroke(gripBg, C.accent, 1, 0.55)
+	local gripIcon = M.icon(gripBg, "resize", C.tabOn, 12)
+	for _, part in ipairs(gripIcon.holder:GetDescendants()) do
+		if part:IsA("GuiObject") then part.ZIndex = 61 end
+	end
+	M.gripIcon = gripIcon
+
+	local resizing = false
+	local rStart, rStartScale, rStartPos
+	local lastTap = 0
+	bind(grip.MouseEnter, function()
+		tw(gripBg, 0.18, { Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 0 })
+		tw(gripStroke, 0.18, { Transparency = 0.1 })
+	end)
+	bind(grip.MouseLeave, function()
+		if not resizing then
+			tw(gripBg, 0.22, { Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 0.1 })
+			tw(gripStroke, 0.22, { Transparency = 0.55 })
+		end
+	end)
+	bind(grip.InputBegan, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			resizing = true
+			rStart = input.Position
+			rStartScale = rootScale.Scale
+			rStartPos = root.Position
+			tw(gripBg, 0.15, { Size = UDim2.fromOffset(28, 28) }, Enum.EasingStyle.Back)
+			tw(gripStroke, 0.15, { Transparency = 0 })
+			-- двойное касание: вернуть размер по умолчанию
+			if os.clock() - lastTap < 0.35 then
+				resizing = false
+				M.manualScale = nil
+				M.refit()
+				tw(rootScale, 0.3, { Scale = M.fitScale }, Enum.EasingStyle.Back)
+				if M.toast then M.toast("Size reset") end
+			end
+			lastTap = os.clock()
+		end
+	end)
+	bind(UserInputService.InputChanged, function(input)
+		if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - rStart
+			-- по диагонали: ширина и высота растут вместе
+			local grow = (delta.X + delta.Y * (W / H)) / 2
+			local wanted = (W * rStartScale + grow) / W
+			local newScale = math.clamp(wanted, 0.45, math.max(M.fitScale * 1.6, 1))
+			M.manualScale = newScale
+			rootScale.Scale = newScale
+			-- верхний левый угол остаётся на месте, угол тянется за пальцем
+			local diff = newScale - rStartScale
+			root.Position = UDim2.new(
+				rStartPos.X.Scale, rStartPos.X.Offset + W * diff / 2,
+				rStartPos.Y.Scale, rStartPos.Y.Offset + H * diff / 2
+			)
+		end
+	end)
+	bind(UserInputService.InputEnded, function(input)
+		if resizing and (input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			resizing = false
+			tw(gripBg, 0.22, { Size = UDim2.fromOffset(22, 22) }, Enum.EasingStyle.Back)
+			tw(gripStroke, 0.22, { Transparency = 0.55 })
+		end
+	end)
+
+	M.refit()
+end)
+
+end
+-- A-mod menu | ЧАСТЬ 3/5: боковая панель с иконками и эффект вкладки
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+	M.run(function()
+		local C, new, corner, tw, bind = M.C, M.new, M.corner, M.tw, M.bind
+		local window = M.window
+		local HEADER_H, SIDE_W, CW, CH = M.HEADER_H, M.SIDE_W, M.CW, M.CH
+
+		local TAB_NAMES = { "Combat", "Players", "Visuals", "Misc", "Skins", "Colors", "Settings" }
+		local TAB_ICONS = { "sword", "users", "eye", "grid", "gem", "palette", "sliders" }
+		local TAB_W, TAB_H, TAB_PITCH, TAB_TOP = 49, 48, 49, 2
+		M.TAB_NAMES = TAB_NAMES
+
+		local function tabTop(index)
+			return TAB_TOP + (index - 1) * TAB_PITCH
+		end
+
+		local sidebar = new("Frame", {
+			Name = "Sidebar",
+			Position = UDim2.fromOffset(0, HEADER_H),
+			Size = UDim2.fromOffset(SIDE_W, CH),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BorderSizePixel = 0,
+		}, window)
+		new("UIGradient", {
+			Rotation = 90,
+			Color = ColorSequence.new(Color3.fromRGB(20, 25, 36), Color3.fromRGB(16, 20, 29)),
+		}, sidebar)
+		new("Frame", {
+			Name = "Edge",
+			Position = UDim2.fromOffset(SIDE_W - 1, 0),
+			Size = UDim2.fromOffset(1, CH),
+			BackgroundColor3 = C.sideEdge,
+			BorderSizePixel = 0,
+		}, sidebar)
+		M.sidebar = sidebar
+
+		-- Фон при наведении (под подсветкой и под иконками)
+		local hoverFrames = {}
+		for index = 1, #TAB_NAMES do
+			local hover = new("Frame", {
+				Name = "Hover" .. index,
+				Position = UDim2.fromOffset(2, tabTop(index)),
+				Size = UDim2.fromOffset(TAB_W, TAB_H),
+				BackgroundColor3 = C.tabHover,
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+			}, sidebar)
+			corner(hover, 2)
+			hoverFrames[index] = hover
+		end
+
+		-- Подсветка выбранной вкладки: заливка-градиент, тонкая рамка, свечение и яркая линия слева
+		local highlight = new("Frame", {
+			Name = "Highlight",
+			Position = UDim2.fromOffset(2, tabTop(4)),
+			Size = UDim2.fromOffset(TAB_W, TAB_H),
+			BackgroundColor3 = C.tabSel,
+			BorderSizePixel = 0,
+		}, sidebar)
+		corner(highlight, 3)
+		highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+		new("UIGradient", {
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 44, 76)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(23, 28, 46)),
+			}),
+		}, highlight)
+		local hlStroke = M.stroke(highlight, C.accent, 1, 0.82)
+		local glow = new("Frame", {
+			Name = "Glow",
+			Size = UDim2.fromOffset(22, TAB_H),
+			BackgroundColor3 = C.accent,
+			BackgroundTransparency = 0.7,
+			BorderSizePixel = 0,
+		}, highlight)
+		new("UIGradient", {
+			Transparency = NumberSequence.new(0, 1),
+		}, glow)
+		local bar = new("Frame", {
+			Name = "Bar",
+			Size = UDim2.fromOffset(3, TAB_H),
+			BackgroundColor3 = Color3.fromRGB(110, 158, 252),
+			BorderSizePixel = 0,
+		}, highlight)
+		corner(bar, 2)
+		M.hlStroke = hlStroke
+		M.highlight = highlight
+
+		-- Кнопки вкладок с иконками
+		M.tabButtons = {}
+		M.tabIcons = {}
+		M.currentTab = nil
+
+		for index, name in ipairs(TAB_NAMES) do
+			local button = new("TextButton", {
+				Name = "Tab" .. index,
+				Position = UDim2.fromOffset(2, tabTop(index)),
+				Size = UDim2.fromOffset(TAB_W, TAB_H),
+				BackgroundTransparency = 1,
+				Text = "",
+				AutoButtonColor = false,
+			}, sidebar)
+			local icon = M.icon(button, TAB_ICONS[index], C.tabOff, 22)
+			icon.holder.Position = UDim2.fromScale(0.5, 0.5)
+			M.tabIcons[index] = icon
+			local scale = new("UIScale", { Scale = 1 }, button)
+			M.tabButtons[index] = button
+
+			bind(button.MouseEnter, function()
+				tw(hoverFrames[index], 0.18, { BackgroundTransparency = 0.35 }, Enum.EasingStyle.Quad)
+				if M.currentTab ~= index then
+					M.tint(M.tabIcons[index], Color3.fromRGB(130, 146, 210), 0.18)
+					tw(M.tabIcons[index].scale, 0.18, { Scale = 1.08 }, Enum.EasingStyle.Quad)
+				end
+			end)
+			bind(button.MouseLeave, function()
+				tw(hoverFrames[index], 0.22, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quad)
+				if M.currentTab ~= index then
+					M.tint(M.tabIcons[index], C.tabOff, 0.22)
+					tw(M.tabIcons[index].scale, 0.22, { Scale = 1 }, Enum.EasingStyle.Quad)
+				end
+				tw(scale, 0.12, { Scale = 1 }, Enum.EasingStyle.Quad)
+			end)
+			bind(button.MouseButton1Down, function()
+				tw(scale, 0.1, { Scale = 0.92 }, Enum.EasingStyle.Quad)
+			end)
+			bind(button.MouseButton1Up, function()
+				tw(scale, 0.18, { Scale = 1 }, Enum.EasingStyle.Back)
+			end)
+			bind(button.Activated, function()
+				M.selectTab(index)
+			end)
+		end
+
+		-- Выбор вкладки: подсветка переезжает, иконки меняют цвет и размер
+		function M.selectTab(index, instant)
+			if M.currentTab == index then return end
+			M.currentTab = index
+			local target = UDim2.fromOffset(2, tabTop(index))
+			if instant then
+				highlight.Position = target
+			else
+				tw(highlight, 0.34, { Position = target }, Enum.EasingStyle.Quint)
+			end
+			for i, iconObj in ipairs(M.tabIcons) do
+				local color = (i == index) and C.tabOn or C.tabOff
+				local size = (i == index) and 1.12 or 1
+				if instant then
+					M.tint(iconObj, color)
+					iconObj.scale.Scale = size
+				else
+					M.tint(iconObj, color, 0.25)
+					tw(iconObj.scale, 0.3, { Scale = size }, Enum.EasingStyle.Back)
+				end
+			end
+			if M.onTabSelected then
+				M.onTabSelected(index)
+			end
+		end
+
+		local pagesFrame = new("Frame", {
+			Name = "Content",
+			Position = UDim2.fromOffset(SIDE_W, HEADER_H),
+			Size = UDim2.fromOffset(CW, CH),
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+		}, window)
+		M.pagesFrame = pagesFrame
+	end)
+end
+-- A-mod menu | ЧАСТЬ 5/5: страницы, переключение вкладок, уведомления, запуск
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+	M.run(function()
+		local C, new, corner = M.C, M.new, M.corner
+		local FONT = M.FONT
+		local TweenService = game:GetService("TweenService")
+
+		if not M.pagesFrame or not M.buildPanel then
+			error("Сначала запусти части 1-4")
+		end
+
+		local page = new("Frame", {
+			Name = "Page",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+		}, M.pagesFrame)
+		M.page = page
+
+		new("Frame", {
+			Position = UDim2.fromOffset(9, 11),
+			Size = UDim2.fromOffset(2, 13),
+			BackgroundColor3 = C.sectionBar,
+			BorderSizePixel = 0,
+		}, page)
+		new("TextLabel", {
+			Name = "PageTitle",
+			Position = UDim2.fromOffset(17, 4),
+			Size = UDim2.fromOffset(300, 26),
+			BackgroundTransparency = 1,
+			Text = "Miscellaneous",
+			Font = FONT,
+			TextSize = 14,
+			TextColor3 = C.section,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, page)
+		M.fadeLine(page, 9, 36, UDim2.fromOffset(M.CW - 9 - 11, 1))
+
+		M.buildPanel(page, 9, 48, 261, 296, {
+			{
+				title = "Global",
+				rows = {
+					{ "check", "BunnyHop", false },
+					{ "check", "Anti Flash", true },
+					{ "check", "Hit Sounds", false },
+					{ "check", "C4 Timer Window", true },
+					{ "check", "Planted C4", true },
+					{ "check", "Dropped C4", true },
+					{ "check", "C4 Holder Indicator", true },
+					{ "check", "Spectator List", true },
+					{ "check", "Watermark", true },
+				},
+			},
+		})
+
+		local master = M.buildMaster(page, 278, 48, 292, "Enable Nade Prediction", true)
+
+		local rightPanel = M.buildPanel(page, 278, 85, 292, 251, {
+			{
+				title = "Prediction",
+				rows = {
+					{ "check", "Projectile Paths", true },
+					{ "check", "Local Preview", true },
+					{ "check", "Only When Pin Pulled", true, 14 },
+					{ "check", "Damage Prediction", true },
+					{ "check", "Flash %% Prediction", true },
+					{ "check", "Radius Ring", true },
+					{ "slider", "Thickness:", 0.5, 4.3, 4.1, 1 },
+				},
+			},
+			{
+				title = "Projectile Filter",
+				rows = {
+					{ "check", "HE Grenade", true },
+					{ "check", "Flashbang", true },
+					{ "check", "Smoke Grenade", true },
+					{ "check", "Molotov", true },
+					{ "check", "Decoy", false },
+				},
+			},
+		})
+
+		local shade = new("Frame", {
+			Name = "Shade",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = C.bg,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Active = false,
+			Visible = false,
+			ZIndex = 20,
+		}, rightPanel)
+		corner(shade, 2)
+		local shadeToken = 0
+		master.onChanged = function(enabled)
+			shadeToken = shadeToken + 1
+			local mine = shadeToken
+			if enabled then
+				shade.Active = false
+				TweenService:Create(shade, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+					BackgroundTransparency = 1,
+				}):Play()
+				task.delay(0.27, function()
+					if shadeToken == mine then
+						shade.Visible = false
+					end
+				end)
+			else
+				shade.Visible = true
+				shade.Active = true
+				TweenService:Create(shade, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+					BackgroundTransparency = 0.45,
+				}):Play()
+			end
+		end
+
+		-- ===== Остальные вкладки: свои страницы с плавным переключением =====
+		local TS = game:GetService("TweenService")
+		M.pageList = { [4] = page }
+		local defs = {
+			[1] = { "Combat", { { title = "General", rows = {
+				{ "check", "Auto Block", true }, { "check", "Combo Counter", true },
+				{ "check", "Hit Sounds Pack", false }, { "check", "Smooth Swings", true } } } },
+				{ { title = "Style", rows = {
+				{ "check", "Damage Popups", true }, { "check", "Sword Trail", false },
+				{ "slider", "Intensity:", 0.3, 1, 0.8, 2 } } } } },
+			[2] = { "Players", { { title = "List", rows = {
+				{ "check", "Show Names", true }, { "check", "Show Distance", false },
+				{ "check", "Team Colors", true } } } },
+				{ { title = "Filter", rows = {
+				{ "check", "Only Friends", false }, { "check", "Hide Dead", true },
+				{ "slider", "Range:", 50, 1000, 500, 0 } } } } },
+			[3] = { "Visuals", { { title = "World", rows = {
+				{ "check", "Fullbright", false }, { "check", "No Fog", true },
+				{ "check", "Custom FOV", false }, { "slider", "FOV:", 40, 120, 70, 0 } } } },
+				{ { title = "Interface", rows = {
+				{ "check", "Crosshair", true }, { "check", "Hit Marker", true },
+				{ "check", "Damage Numbers", false } } } } },
+			[5] = { "Skins", { { title = "Weapons", rows = {
+				{ "check", "Custom Skins", false }, { "check", "Random Skin", false },
+				{ "check", "Keep On Respawn", true } } } },
+				{ { title = "Models", rows = {
+				{ "check", "Knife Model", false }, { "check", "Gloves", false } } } } },
+			[6] = { "Colors", { { title = "Theme", rows = {
+				{ "check", "Rainbow Accent", false }, { "check", "Dark Header", true },
+				{ "slider", "Hue:", 0, 360, 215, 0 } } } },
+				{ { title = "Elements", rows = {
+				{ "check", "Tinted Boxes", true }, { "check", "Glow", true },
+				{ "slider", "Glow Size:", 0, 10, 4, 1 } } } } },
+			[7] = { "Settings", { { title = "Menu", rows = {
+				{ "check", "Open With K", true }, { "check", "Fade Animations", true },
+				{ "check", "Lock Position", false } } } },
+				{ { title = "Config", rows = {
+				{ "check", "Auto Load Config", true }, { "check", "Notifications", true },
+				{ "slider", "UI Scale:", 0.6, 1.4, 1, 2 } } } } },
+		}
+		for index, def in pairs(defs) do
+			local pg = new("Frame", {
+				Name = "Page" .. index, Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1, Visible = false,
+			}, M.pagesFrame)
+			new("Frame", { Position = UDim2.fromOffset(9, 11), Size = UDim2.fromOffset(2, 13),
+				BackgroundColor3 = C.sectionBar, BorderSizePixel = 0 }, pg)
+			new("TextLabel", { Position = UDim2.fromOffset(17, 4), Size = UDim2.fromOffset(300, 26),
+				BackgroundTransparency = 1, Text = def[1], Font = FONT, TextSize = 14,
+				TextColor3 = C.section, TextXAlignment = Enum.TextXAlignment.Left }, pg)
+			M.fadeLine(pg, 9, 36, UDim2.fromOffset(M.CW - 9 - 11, 1))
+			M.buildPanel(pg, 9, 48, 261, 296, def[2])
+			M.buildPanel(pg, 278, 48, 292, 296, def[3])
+			M.pageList[index] = pg
+		end
+
+		-- Переключение: старая страница скрывается, новая выезжает справа
+		local shown = 4
+		M.onTabSelected = function(index)
+			local nextPage = M.pageList[index]
+			if not nextPage or index == shown then return end
+			local old = M.pageList[shown]
+			shown = index
+			if old then old.Visible = false end
+			nextPage.Position = UDim2.fromOffset(16, 0)
+			nextPage.Visible = true
+			TS:Create(nextPage, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {
+				Position = UDim2.fromOffset(0, 0),
+			}):Play()
+		end
+
+		-- Уведомление снизу окна при смене вкладки
+		local toast = new("TextLabel", {
+			Name = "Toast", AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, 30), Size = UDim2.fromOffset(150, 22),
+			BackgroundColor3 = C.tabSel, TextColor3 = C.label, Font = FONT, TextSize = 12,
+			Text = "", ZIndex = 30,
+		}, M.window)
+		corner(toast, 11)
+		M.stroke(toast, C.accent, 1, 0.6)
+		local toastToken = 0
+		function M.toast(text)
+			toastToken = toastToken + 1
+			local mine = toastToken
+			toast.Text = text
+			TS:Create(toast, TweenInfo.new(0.3, Enum.EasingStyle.Quint), { Position = UDim2.new(0.5, 0, 1, -10) }):Play()
+			task.delay(1.6, function()
+				if toastToken == mine then
+					TS:Create(toast, TweenInfo.new(0.3, Enum.EasingStyle.Quint), { Position = UDim2.new(0.5, 0, 1, 30) }):Play()
+				end
+			end)
+		end
+		local prevTab = M.onTabSelected
+		M.onTabSelected = function(index)
+			prevTab(index)
+			M.toast(M.TAB_NAMES[index])
+		end
+	end)
+end
+
+-- ===== запуск =====
+local M = _G.AmodM
+if not M then
+	warn("[A-mod] Сначала запусти ЧАСТЬ 1")
+else
+	M.run(function()
+		if not (M.selectTab and M.page and M.setOpen) then
+			error("Запусти части 1-4 по порядку")
+		end
+
+		M.selectTab(4, true)
+
+		M.refit()
+		local camera = workspace.CurrentCamera
+		if camera then
+			M.bind(camera:GetPropertyChangedSignal("ViewportSize"), function()
+				M.refit()
+			end)
+		end
+		M.bind(workspace:GetPropertyChangedSignal("CurrentCamera"), function()
+			M.refit()
+		end)
+
+		M.setOpen(true)
+
+		--   M.controls["Anti Flash"].onChanged = function(on) ... end
+		--   M.controls["Thickness:"].onChanged = function(value) ... end
+		--   M.onTabSelected = function(index) ... end
+		--   M.toggle() открыть/закрыть, M.destroy() убрать меню полностью
+	end)
+end
